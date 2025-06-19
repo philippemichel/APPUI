@@ -37,3 +37,9 @@ generique.tex
 _extensions
 APPUI.Rproj
 doc
+/.quarto/
+QTDublinIrish.otf
+*.g*
+*.ist
+*.pdf
+pas_appui.tex

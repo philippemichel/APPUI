@@ -14,7 +14,7 @@ format:
   titlepage-include-file:
    - generique.tex
   documentclass: scrreprt
-  classoption: [french]
+  classoption: [french, bibtotoc]
   number-sections: true
   titlepage-footer: "\\today"
 titlepage-theme:

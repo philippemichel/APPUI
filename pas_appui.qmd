@@ -1,0 +1,91 @@
+
+---
+subtitle: "Plan d'analyse statistique V1.0"
+lot: false
+lof: false
+---
+
+```{r info}
+rm(list=ls())
+library("baseph")
+library("tidyverse")
+# sessionInfo()
+```
+
+# Généralités
+
+Le \gls{alpha} retenu sera de 0,05 & la \gls{puissance} de 0,8.
+
+Vu le faible nombre de cas on ne fera pas d'hypothèse de normalité. Les variables numériques seront présentées par leur médiane avec les quartiles & comparées grâce au test non paramétrique de \textsc{\gls{wilcox}}. Les variables discrètes seront présentées en nombre avec le pourcentage. Le test du $\chi^2$ sera utilisé sous réserve d'un effectif suffisant, à défaut le test exact de \textsc{\gls{fisher}}. Des graphiques seront réalisés pour les résultats importants (package `ggplot2` [@ggplot]).
+
+
+
+## Taille de l'échantillon
+
+IL s'agit d'une étude purement descriptive sans test statistique. Il n'y a donc pas de calcul précis possible de taille d'échantillon nécessaire. Cependant, on peut estimer une taille correcte. En prenant le pire cas c'est à dire une proportion de \qty{50}{\percent} pour l'objectif principal & avec une erreur acceptable de \qty{10}{\percent}, on obtient une taille d'échantillon de \num{`r floor(nb.obs.ph(px = 0.5, ex= 0.1)*1.1) +1`} cas nécessaires dans l'échantillon.
+
+
+## Qualité de l'échantillon
+
+### Données manquantes
+
+Le décompte des données manquantes sera réalisé & présenté par un tableau ou un graphique. Les variables comportant trop de données manquantes ou non utilisables ne seront pas prises en compte après validation par le promoteur.
+
+Après ce premier tri une imputation des données manquantes (package `missMDA` [@miss]) sera réalisée uniquement pour la recherche du meilleur modèle par step-by-step descendant pour les analyses par régression logistique.
+
+### Corrélations anormales
+
+Une analyse de corrélation (package `corr` [@corr]) entre les variables sera réalisée & présentée sur un graphique de corrélation. Si certaines variables se montrent anormalement corrélées elles pourront être exclues de l'étude après accord du promoteur.
+
+## Description de la population
+
+Un tableau descriptif présentant les données démographiques de la population sera présenté.
+
+# Objectif principal
+
+*La proportion de patients ayant eu une prise en charge adéquate à la sortie des Urgences  conformément aux recommandations de la SPILF 2018.*
+
+L'adéquation de la prise en charge est définie par le promoteur pour chaque cas \footnote{Prise en charge conforme aux recos -- colonne S}. Le résultat sera présenté par le nombre de cas avec le pourcentage de la population totale & son intervalle de confiance (calcul après transformation angulaire si le pourcentage est supérieur à \qty{90}{\percent}).
+
+Une recherche de facteurs pouvant influer l'adéquation de la prise en charge sera tout d'abord réalisée par une analyse univariée portant sur toutes les variables décrivant la population (âge, sexe , antécédents\dots\footnote{colonnes B à L}). Les variables significatives  p-value < \num{0.2}) seront ensuite incluses dans un modèle de régression logistique pour rechercher des facteurs indépendants. Une recherche du meilleur modèle sera réalisée par step-by-step descendant (critère de \gls{aic})après imputation des données manquantes (package `missMDA` [@miss]).
+
+# Objectifs secondaires
+
+## Objectif secondaire 1
+*Adéquation entre le diagnostic retenu, selon la symptomatologie décrite dans le dossier médical, et les définitions cliniques de la SPILF 2018.*
+
+La qualité du diagnostic retenu est définie par le promoteur pour chaque cas \footnote{Conforme aux définitions de la SPILF -- colonne O}. Le résultat sera présenté par le nombre de cas corrects avec le pourcentage & son intervalle de confiance (calcul après transformation angulaire si le pourcentage est supérieur à \qty{90}{\percent}).
+
+Une recherche de facteurs pouvant influer ce résultat sera tout d'abord réalisée par une analyse univariée portant sur toutes les variables décrivant la population (âge, sexe , antécédents\dots\footnote{colonnes B à L}). Les variables significatives  p-value < \num{0.2}) seront ensuite incluses dans un modèle de régression logistique pour rechercher des facteurs indépendants. Une recherche du meilleur modèle sera réalisée par step-by-step descendant (basé sur le \gls{aic})après imputation des données manquantes (package `missMDA` [@miss]).
+
+
+## Objectif secondaire 2
+*Identifier les examens complémentaires demandés aux urgences pour les patients ambulatoires avec diagnostic d’infection urinaire retenu aux urgences  et évaluer leur pertinence selon les recommandations de la SPILF 2018.*
+
+On étudie tout d'abord si un examen complémentaire a été demandé \footnote{Examen complémentaire demandé aux urgences -- colonne T} puis examen par examen \footnote{colonnes U à W} Les résultats seront présentés par le nombre de cas avec le pourcentage & son intervalle de confiance (calcul après transformation angulaire si le pourcentage est supérieur à \qty{90}{\percent}).
+
+La pertinence de cette demande \footnote{Pertinence de la demande de l'examen complémentaire aux urgences -- colonne X}sera présentée le nombre de cas avec le pourcentage & son intervalle de confiance (calcul après transformation angulaire si le pourcentage est supérieur à \qty{90}{\percent}).
+
+## Objectif secondaire 3
+*Identifier les examens complémentaires prescrits à la sortie des urgences pour les patients ambulatoires avec diagnostic d’infection urinaire retenu aux urgences et évaluer leur pertinence selon les recommandations de la SPILF 2018.*
+
+On étudie tout d'abord si un examen complémentaire a été prescrit \footnote{Examen complémentaire préscrit à la sortie des urgences -- colonne Y} puis examen par examen \footnote{colonnes Z à AB} Les résultats seront présentés par le nombre de cas avec le pourcentage & son intervalle de confiance (calcul après transformation angulaire si le pourcentage est supérieur à \qty{90}{\percent}).
+
+La pertinence de cette prescription \footnote{Pertinence de la prescription de l'examen complémentaire -- colonne AC}sera présentée le nombre de cas avec le pourcentage & son intervalle de confiance (calcul après transformation angulaire si le pourcentage est supérieur à \qty{90}{\percent}).
+
+## Objectif secondaire 4
+*Identifier les types de spécialistes médicaux impliqués par demande d’avis spécialisé de l’urgentiste dans la prise en charge du patient aux urgences pour suspicion d’infection urinaire.*
+
+Le nombre de recours à un avis spécialisé sera étudié \footnote{Avis spécialisé demandé -- colonne AD} puis par spécialité \footnote{colonnes AE à AF}. Les résultats seront présentés par le nombre de cas avec le pourcentage & son intervalle de confiance (calcul après transformation angulaire si le pourcentage est supérieur à \qty{90}{\percent}).
+
+## Objectif secondaire 5
+*Recueillir les résultats des examens microbiologiques éventuellement demandés aux urgences et évaluer l’efficacité de la prise en charge thérapeutique proposé par l’urgentiste.*
+
+On étudie tout d'abord si un résultat microbiologique est disponible \footnote{Résultats de l'examen microbiologique réalisé aux urgences disponible -- colonne AG} puis le germe retrouvé \footnote{colonnes AH à AI}. Les résultats seront présentés par le nombre de cas avec le pourcentage & son intervalle de confiance (calcul après transformation angulaire si le pourcentage est supérieur à \qty{90}{\percent}).
+
+L’efficacité de la prise en charge est notée par le promoteur \footnote{Prise en charge thérapeutique aux urgences efficace -- colonne AJ}.Le résultat sera présenté par le nombre de cas avec le pourcentage & son intervalle de confiance (calcul après transformation angulaire si le pourcentage est supérieur à \qty{90}{\percent}).
+
+
+\printglossary
+
+
