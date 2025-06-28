@@ -1,0 +1,108 @@
+---
+title: "Rapport staitsitique V0.1"
+cache: false
+---
+
+
+# Généralités
+
+
+```{r}
+#| label: setup
+ 
+rm(list = ls())
+#
+library(ggcorrplot)
+library(baseph)
+library(emmeans)
+library(ggsci)
+library(plotly)
+library(janitor)
+library(tidyverse)
+library(missMDA)
+library(FactoMineR)
+library(factoextra)
+library(visdat)
+library(kableExtra)
+library(gtsummary)
+# library(DataExplorer)
+# library(colorspace)
+# library(forestmodel)
+# library(fmsb)
+library(labelled)
+#
+classeur <- "appui.ods"
+expx <- FALSE
+if (expx) {
+  file.create(classeur)
+  file.remove(classeur)
+  write_ods(iris, classeur)
+}
+
+# sessionInfo()
+theme_gtsummary_language(language = "fr", decimal.mark = ",")
+theme_gtsummary_journal(journal = "jama")
+options(OutDec = ",")
+ptest <- list(all_continuous() ~ "t.test", all_categorical() ~ "chisq.test")
+stt <- list(
+      all_continuous() ~ "{mean} ({sd})",
+      all_categorical() ~ "{n} / {N} ({p}%)"
+    )
+load("datas/appui.RData")
+```
+
+# Qualité des données
+
+## Corrélations anormales
+
+```{r}
+#| label: fig-corr
+#| fig-cap: Corrélations internes
+#| eval: true
+zz <- tt |>
+  dplyr::select(!id) |> 
+  mutate_if(is.factor,as.numeric) |> 
+  remove_constant() 
+zz <- cor(zz, use = "pairwise.complete.obs")
+  ggcorrplot(zz, 
+             type = "lower", 
+             method = "square",
+             ggtheme = "theme_light")
+```
+
+
+## Données manquantes
+
+```{r}
+#| label: fig-manq
+#| fig-cap: Données manquantes
+
+tt |>
+  dplyr::select(-c(id)) |>
+  vis_dat(palette = "qual")
+```
+
+# Descriptif
+
+::: {.callout-note}
+Dans tous les tableaux, pour les variables en `Oui/Non` seules les réponses `Oui` sont affichées.
+:::
+
+
+Les données concernent `r nrow(tt)` cas & pour `r ncol(tt)` variables.
+
+## Régulation
+
+```{r}
+#| label: tbl-regul
+#| tbl-cap: Description de la population - Régulation
+
+tt |>
+  dplyr::select(!id) |>
+  tbl_summary(misssing = "no") |>
+  add_n() |>
+  bold_labels() |>
+  modify_header(label ~ " ") |>
+  pexptabph(exp = expx, nomfich = classeur, nomsheet = "demog", lg = TRUE)
+```
+
