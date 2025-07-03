@@ -1,10 +1,7 @@
 ---
-title: "Rapport staitsitique V0.1"
+title: "Rapport statistique V0.1"
 cache: false
 ---
-
-
-# Généralités
 
 
 ```{r}
@@ -25,10 +22,7 @@ library(factoextra)
 library(visdat)
 library(kableExtra)
 library(gtsummary)
-# library(DataExplorer)
-# library(colorspace)
-# library(forestmodel)
-# library(fmsb)
+ library(forestmodel)
 library(labelled)
 #
 classeur <- "appui.ods"
@@ -49,7 +43,27 @@ stt <- list(
       all_categorical() ~ "{n} / {N} ({p}%)"
     )
 load("datas/appui.RData")
+#
+ouinon <- list(
+      antecedent_urinaire = "Oui",
+      fragilite = "Oui",
+      immunodepression = "Oui")
 ```
+
+```{r}
+#| label: macro_transang
+
+aftrans <- function(x) {
+zz <- table(x)
+trans <- transangph(zz[2],sum(zz))
+binf <- round(trans$binf*100,1)
+bsup <- round(trans$bsup*100,1)
+pc <- round(zz[[2]] / sum(zz) * 100, 1)
+pct <- paste0(zz[[2]] , " cas soit ", pc, "% [", binf, "% ; ", bsup, "%]")
+return(pct)
+}
+```
+
 
 # Qualité des données
 
@@ -91,18 +105,219 @@ Dans tous les tableaux, pour les variables en `Oui/Non` seules les réponses `Ou
 
 Les données concernent `r nrow(tt)` cas & pour `r ncol(tt)` variables.
 
-## Régulation
+La $PA_{m}$ a été calculée selon l'approximation usuelle : $PA_{m} = \frac{PA_{syst} + 2 PA_{diast}}{3}$.
 
 ```{r}
-#| label: tbl-regul
-#| tbl-cap: Description de la population - Régulation
+#| label: tbl-demog
+#| tbl-cap: Description de la population
 
 tt |>
-  dplyr::select(!id) |>
-  tbl_summary(misssing = "no") |>
+  dplyr::select(sexe:allergie) |>
+  tbl_summary(missing = "no",
+              statistic = stt,
+              value = ouinon) |>
   add_n() |>
   bold_labels() |>
   modify_header(label ~ " ") |>
   pexptabph(exp = expx, nomfich = classeur, nomsheet = "demog", lg = TRUE)
 ```
 
+```{r}
+#| label: constants
+
+tt <- tt |>
+  janitor::remove_constant(na.rm = TRUE)
+```
+
+Les variables constantes seront supprimées dans le sreste du travail, il en reste `r ncol(tt)` variables.
+
+# Critère principal
+*La proportion de patients ayant eu une prise en charge adéquate à la sortie des Urgences conformément aux recommandations de la SPILF 2018.*
+```{r}
+#| label: tbl-crit1
+#| tbl-cap: Critère principal
+
+tt |> 
+  dplyr::select(pac_recos) |>
+  tbl_summary(
+    missing = "no",
+  ) |>
+  add_n() |>
+  bold_labels() |>
+  modify_header(label ~ " ") |>
+  pexptabph(exp = expx, nomfich = classeur, nomsheet = "crit1", lg = TRUE)
+```
+
+Les cas conformes représentent `r aftrans(tt$pac_recos)` (Pourcentage avec son intervalle de confiance à 95 %)
+
+## Facteurs associés
+
+```{r}
+#| label: tbl-critfact1
+#| tbl-cap: Facteurs associés - analyse monovariée
+
+
+tt |>
+  dplyr::select(pac_recos, sexe:fc) |>
+  tbl_summary(
+    by = pac_recos,
+    missing = "no",
+    statistic = stt,
+     value = ouinon
+  ) |>
+  add_n() |>
+  add_p(test = ptest) |>
+  bold_labels() |>
+  bold_p() |>
+  modify_header(label ~ " ") |>
+  pexptabph(exp = expx, nomfich = classeur, nomsheet = "critfact1", lg = TRUE)
+```
+
+
+```{r}
+#| label: fig-princmulti
+#| fig-cap: Facteurs associés - analyse multivariée
+
+
+glm(pac_recos ~ sexe + age +ta + fc, data = tt, family = "binomial") |> 
+  forest_model()
+```
+
+# Objectif secondaires
+
+## Objectif I
+*Adéquation entre le diagnostic retenu, selon la symptomatologie décrite dans le dossier médical, et les définitions cliniques de la SPILF 2018.*
+
+```{r}
+#| label: tbl-crits1
+#| tbl-cap: Adéquation diagnostique
+
+tt |> 
+  dplyr::select(conforme_spilf) |>
+  tbl_summary(
+    missing = "no",
+  ) |>
+  add_n() |>
+  bold_labels() |>
+  modify_header(label ~ " ") |>
+  pexptabph(exp = expx, nomfich = classeur, nomsheet = "crit1", lg = TRUE)
+```
+
+Les diagnostics conformes aux recommandations de la \textsc{spif} représentent `r aftrans(tt$conforme_spilf)` (Pourcentage avec son intervalle de confiance à 95 %)
+
+```{r}
+#| label: fig-second1
+#| fig-cap: Facteurs associés - analyse multivariée
+
+
+glm(conforme_spilf ~ sexe + age +ta + fc, data = tt, family = "binomial") |> 
+  forest_model()
+```
+## Objectif II
+*Identifier les examens complémentaires demandés aux urgences pour les patients ambulatoires avec diagnostic d’infection urinaire retenu aux urgences et évaluer leur pertinence selon les recommandations de la SPILF 2018.*
+
+### Examens demandés
+
+```{r}
+#| label: tbl-examcomp1
+#| tbl-cap: Examens complémentaires
+
+tt |> 
+  dplyr::select(exam_comp:exam_dimagerie) |> 
+  tbl_summary(
+    missing = "no",
+    statistic = stt,
+    value = list(exam_comp = "Oui")) |> 
+        add_n() |>
+  bold_labels() |>
+  modify_header(label ~ " ") |>
+  pexptabph(exp = expx, nomfich = classeur, nomsheet = "examcomp1", lg = TRUE)
+```
+
+### Pertinence des examens demandés
+
+```{r}
+#| label: tbl-examcomp2
+#| tbl-cap: Pertinence des examens demandés
+
+tt |> 
+  dplyr::select(pertinence_exam_comp) |>
+  tbl_summary(
+    missing = "no",
+  ) |>
+  add_n() |>
+  bold_labels() |>
+  modify_header(label ~ " ") |>
+  pexptabph(exp = expx, nomfich = classeur, nomsheet = "examcomp2", lg = TRUE)
+```
+
+Les demandes d'examens complémentaires conformes aux recommandations de la \textsc{spif} représentent `r aftrans(tt$pertinence_exam_comp)` (Pourcentage avec son intervalle de confiance à 95 %).
+
+## Objectif III
+*Identifier les examens complémentaires prescrits à la sortie des urgences pour les patients ambulatoires avec diagnostic d’infection urinaire retenu aux urgences et évaluer leur pertinence selon les recommandations de la spif 2018.*
+
+## Objectif IV
+*Identifier les types de spécialistes médicaux impliqués par demande d’avis spécialisé de l’urgentiste dans la prise en charge du patient aux urgences pour suspicion d’infection urinaire.*
+
+
+```{r}
+#| label: tbl-spe1
+#| tbl-cap: Avis spécialistes
+
+tt |> 
+  dplyr::select(avis_specialise:specialite) |> 
+  tbl_summary(
+    missing = "no",
+    statistic = stt,
+    value = list(avis_specialise = "Oui")) |> 
+        add_n() |>
+  bold_labels() |>
+  modify_header(label ~ " ") |>
+  pexptabph(exp = expx, nomfich = classeur, nomsheet = "spe1", lg = TRUE)
+```
+
+Les demandes d'avis spécialisés représentent `r aftrans(tt$pertinence_exam_comp)` (Pourcentage avec son intervalle de confiance à 95 %).
+
+## Objectif V
+*Recueillir les résultats des examens microbiologiques éventuellement demandés aux urgences et évaluer l’efficacité de la prise en charge thérapeutique proposé par l’urgentiste.*
+
+### Microbiologie
+
+```{r}
+#| label: tbl-microb
+#| tbl-cap: Microbiologie
+
+
+tt |> 
+  dplyr::select(microbio_dispo:germe) |> 
+  tbl_summary(
+    missing = "no",
+    statistic = stt,
+    value = list(microbio_dispo = "Oui",
+                 germe_identifie = "Oui")) |> 
+        add_n() |>
+  bold_labels() |>
+  modify_header(label ~ " ") |>
+  pexptabph(exp = expx, nomfich = classeur, nomsheet = "spe1", lg = TRUE)
+```
+
+### Efficacité de la prise en charge
+
+```{r}
+#| label: tbl-effic
+#| tbl-cap: Efficacité de la prise en charge
+
+
+tt |> 
+  dplyr::select(pac_efficace) |> 
+  tbl_summary(
+    missing = "no",
+    statistic = stt,
+    value = list(pac_efficace = "Oui")) |> 
+        add_n() |>
+  bold_labels() |>
+  modify_header(label ~ " ") |>
+  pexptabph(exp = expx, nomfich = classeur, nomsheet = "effic", lg = TRUE)
+```
+
+La prsie en charge a été jugée efficace pour `r aftrans(tt$pac_efficace)` (Pourcentage avec son intervalle de confiance à 95 %).

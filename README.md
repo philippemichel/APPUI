@@ -3,7 +3,7 @@
 
 <!-- badges: start -->
 
-![Static badge](https://img.shields.io/badge/PAS-en_cours-green)
+![Static badge](https://img.shields.io/badge/PAS-terminé-green)
 
 ![Static badge](https://img.shields.io/badge/rapport-attente-red)
 
@@ -23,7 +23,11 @@
 
 - **_quarto.yml** : entête en yaml & $\LaTeX$ pour les fichiers Quarto
 - **plan_analyse.qmd** : plan d'analyse des données
+- **Rapport_appui** : Rapport statistique (ébauche)
 - **entete.tex** : entête $\LaTeX$ pour les fichiers Quarto (réglages...), lu par _quarto.yml
-````
 
-Pour des raisons de confidentialité le fichier `generique.tex` est absent. Vous en trouverez le squelette dans le dépôt [QUARTO_CLINIQUE](https://github.com/philippemichel/quarto_clinique.git)
+
+Pour des raisons de confidentialité le fichier `generique.tex` est absent.
+
+Vous en trouverez le squelette dans le dépôt : [QUARTO_CLINIQUE](https://github.com/philippemichel/quarto_clinique.git)
+
