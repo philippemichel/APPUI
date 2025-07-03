@@ -105,7 +105,9 @@ Dans tous les tableaux, pour les variables en `Oui/Non` seules les réponses `Ou
 
 Les données concernent `r nrow(tt)` cas & pour `r ncol(tt)` variables.
 
-La $PA_{m}$ a été calculée selon l'approximation usuelle : $PA_{m} = \frac{PA_{syst} + 2 PA_{diast}}{3}$.
+La $PA_{m}$ a été calculée selon l'approximation usuelle :
+
+$$PA_{\text{Moyenne}} = \frac{PA_{\text{Systolique}} + 2 PA_{\text{Diastolique}}}{3}$$. 
 
 ```{r}
 #| label: tbl-demog
@@ -123,13 +125,48 @@ tt |>
 ```
 
 ```{r}
+#| label: fig-pyr
+#| fig-cap: Pyramide des âges
+
+tt |>
+  apyramid::age_pyramid(age, sexe,
+    na.rm = TRUE,
+    proportion = TRUE,
+    pal = c("lightpink", "lightblue"),
+    show_midpoint = FALSE
+  ) +
+  labs(
+    title = "Pyramide des âges",
+    x = "Âge"
+  ) +
+  theme_light() +
+  theme(
+    plot.title = element_text(size = 14, face = "bold"),
+    plot.subtitle = element_text(size = 12),
+    axis.title.x = element_blank(),
+    legend.title = element_text(size = 12),
+    axis.title.y = element_text(
+      size = 12,
+      angle = 0,
+      vjust = .5
+    ),
+    axis.text.x = element_text(size = 12),
+    axis.text.y = element_text(size = 12),
+    legend.position = "right"
+  ) +
+  scale_colour_manual(labels = c("lightpink", "lightblue"))
+```
+
+
+```{r}
 #| label: constants
+#| eval: false
 
 tt <- tt |>
   janitor::remove_constant(na.rm = TRUE)
 ```
 
-Les variables constantes seront supprimées dans le sreste du travail, il en reste `r ncol(tt)` variables.
+Les variables constantes seront supprimées dans le reste du travail, il en reste `r ncol(tt)` variables.
 
 # Critère principal
 *La proportion de patients ayant eu une prise en charge adéquate à la sortie des Urgences conformément aux recommandations de la SPILF 2018.*
@@ -179,8 +216,8 @@ tt |>
 #| fig-cap: Facteurs associés - analyse multivariée
 
 
-glm(pac_recos ~ sexe + age +ta + fc, data = tt, family = "binomial") |> 
-  forest_model()
+ll <- glm(pac_recos ~ sexe + age +ta , data = tt, family = "binomial") 
+#  forest_model()
 ```
 
 # Objectif secondaires
@@ -210,13 +247,13 @@ Les diagnostics conformes aux recommandations de la \textsc{spif} représentent 
 #| fig-cap: Facteurs associés - analyse multivariée
 
 
-glm(conforme_spilf ~ sexe + age +ta + fc, data = tt, family = "binomial") |> 
-  forest_model()
+ll <- glm(conforme_spilf ~ sexe + age +ta + fc, data = tt, family = "binomial") 
+#  forest_model()
 ```
 ## Objectif II
 *Identifier les examens complémentaires demandés aux urgences pour les patients ambulatoires avec diagnostic d’infection urinaire retenu aux urgences et évaluer leur pertinence selon les recommandations de la SPILF 2018.*
 
-### Examens demandés
+### Examens demandés aux urgences
 
 ```{r}
 #| label: tbl-examcomp1
@@ -238,7 +275,7 @@ tt |>
 
 ```{r}
 #| label: tbl-examcomp2
-#| tbl-cap: Pertinence des examens demandés
+#| tbl-cap: Pertinence des examens demandés aux urgences
 
 tt |> 
   dplyr::select(pertinence_exam_comp) |>
@@ -255,6 +292,43 @@ Les demandes d'examens complémentaires conformes aux recommandations de la \tex
 
 ## Objectif III
 *Identifier les examens complémentaires prescrits à la sortie des urgences pour les patients ambulatoires avec diagnostic d’infection urinaire retenu aux urgences et évaluer leur pertinence selon les recommandations de la spif 2018.*
+
+### Examens demandés aux à la sortie des urgences
+
+```{r}
+#| label: tbl-examcomps1
+#| tbl-cap: Examens complémentaires demandés à la sortie des urgences
+
+tt |> 
+  dplyr::select(exam_com_sortie:imagerie) |> 
+  tbl_summary(
+    missing = "no",
+    statistic = stt,
+    value = list(exam_com_sortie = "Oui")) |> 
+        add_n() |>
+  bold_labels() |>
+  modify_header(label ~ " ") |>
+  pexptabph(exp = expx, nomfich = classeur, nomsheet = "examcomps1", lg = TRUE)
+
+# Attention ! Si autre à vérifier
+```
+
+### Pertinence des examens demandés à la sortie
+
+```{r}
+#| label: tbl-examcomps2
+#| tbl-cap: Pertinence des examens demandés aux urgences
+
+tt |> 
+  dplyr::select(pertinence_exam_sortie) |>
+  tbl_summary(
+    missing = "no",
+  ) |>
+  add_n() |>
+  bold_labels() |>
+  modify_header(label ~ " ") |>
+  pexptabph(exp = expx, nomfich = classeur, nomsheet = "examcomps2", lg = TRUE)
+```
 
 ## Objectif IV
 *Identifier les types de spécialistes médicaux impliqués par demande d’avis spécialisé de l’urgentiste dans la prise en charge du patient aux urgences pour suspicion d’infection urinaire.*
@@ -300,6 +374,16 @@ tt |>
   modify_header(label ~ " ") |>
   pexptabph(exp = expx, nomfich = classeur, nomsheet = "spe1", lg = TRUE)
 ```
+
+```{r}
+#| label: fig-microb
+#| fig-cap: Germes retrouvés
+
+st <- paste0("N = ",length(na.omit(tt$germe)))
+
+bardecph(tt,germe, titre = "Germes rerouvés", stitre = st)
+```
+
 
 ### Efficacité de la prise en charge
 

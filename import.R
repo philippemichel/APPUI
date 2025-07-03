@@ -27,11 +27,14 @@ tt <- read_ods("datas/appui.ods", sheet = "donnees", col_types = NULL, na = c("N
   janitor::clean_names() |>
   mutate_if(is.character, as.factor) |>
   mutate(id = as.factor(id)) |>
-  mutate(ta = pam(ta))
+  mutate(ta = pam(ta)) |>
+  mutate(age = fct_relevel(
+    age,
+    "18-25 ans", "< 65 ans"
+  ))
 
 var_label(tt) <- bn$nom
 
 tt <- tt |>
-  select(!starts_with("si_")) |>
-  select(!starts_with("date"))
+  dplyr::select(!starts_with("date"))
 save(tt, file = "datas/appui.RData")

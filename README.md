@@ -27,7 +27,5 @@
 - **entete.tex** : entête $\LaTeX$ pour les fichiers Quarto (réglages...), lu par _quarto.yml
 
 
-Pour des raisons de confidentialité le fichier `generique.tex` est absent.
-
-Vous en trouverez le squelette dans le dépôt : [QUARTO_CLINIQUE](https://github.com/philippemichel/quarto_clinique.git)
+Pour des raisons de confidentialité le fichier `generique.tex` est absent. Vous en trouverez le squelette dans le dépôt : [QUARTO_CLINIQUE](https://github.com/philippemichel/quarto_clinique.git)
 
