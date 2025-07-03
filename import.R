@@ -30,9 +30,20 @@ tt <- read_ods("datas/appui.ods", sheet = "donnees", col_types = NULL, na = c("N
   mutate(ta = pam(ta)) |>
   mutate(age = fct_relevel(
     age,
-    "18-25 ans", "< 65 ans"
-  ))
-
+    "< 65 ans", "entre 65 et 75 ans", "> 75 ans"
+  )) |>
+  mutate(
+    grossesse = case_when(
+      sexe == "M" ~ NA,
+      .default = grossesse
+    )
+  ) |>
+  mutate(
+    fragilite = case_when(
+      age == "< 65 ans" ~ NA,
+      .default = fragilite
+    )
+  )
 var_label(tt) <- bn$nom
 
 tt <- tt |>

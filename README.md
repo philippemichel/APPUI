@@ -21,10 +21,12 @@
 
 ## Fichiers
 
-- **_quarto.yml** : entête en yaml & $\LaTeX$ pour les fichiers Quarto
-- **plan_analyse.qmd** : plan d'analyse des données
-- **Rapport_appui** : Rapport statistique (ébauche)
+- **_quarto.yml** : entête en `yaml` pour les fichiers Quarto
 - **entete.tex** : entête $\LaTeX$ pour les fichiers Quarto (réglages...), lu par _quarto.yml
+- **plan_analyse.qmd** : plan d'analyse des données
+- **import.R** : Routine d'importation & de mise en forme des données
+- **Rapport_appui** : Rapport statistique (ébauche)
+
 
 
 Pour des raisons de confidentialité le fichier `generique.tex` est absent. Vous en trouverez le squelette dans le dépôt : [QUARTO_CLINIQUE](https://github.com/philippemichel/quarto_clinique.git)

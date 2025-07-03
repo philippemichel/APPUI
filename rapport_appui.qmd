@@ -1,28 +1,28 @@
 ---
-title: "Rapport statistique V0.1"
+title: "Rapport statistique V0.2"
 cache: false
 ---
 
 
 ```{r}
 #| label: setup
- 
+
 rm(list = ls())
 #
 library(ggcorrplot)
 library(baseph)
-library(emmeans)
+# library(emmeans)
 library(ggsci)
-library(plotly)
+# library(plotly)
 library(janitor)
 library(tidyverse)
 library(missMDA)
-library(FactoMineR)
-library(factoextra)
+# library(FactoMineR)
+# library(factoextra)
 library(visdat)
 library(kableExtra)
 library(gtsummary)
- library(forestmodel)
+library(forestmodel)
 library(labelled)
 #
 classeur <- "appui.ods"
@@ -39,28 +39,35 @@ theme_gtsummary_journal(journal = "jama")
 options(OutDec = ",")
 ptest <- list(all_continuous() ~ "t.test", all_categorical() ~ "chisq.test")
 stt <- list(
-      all_continuous() ~ "{mean} ({sd})",
-      all_categorical() ~ "{n} / {N} ({p}%)"
-    )
+  all_continuous() ~ "{mean} ({sd})",
+  all_categorical() ~ "{n}/{N} ({p}%)"
+)
 load("datas/appui.RData")
 #
+oo <- "Oui"
 ouinon <- list(
-      antecedent_urinaire = "Oui",
-      fragilite = "Oui",
-      immunodepression = "Oui")
+  antecedent_urinaire = oo,
+  fragilite = oo,
+  immunodepression = oo,
+  exam_comp = oo,
+  grossesse = oo,
+  exam_com_sortie = oo,
+  avis_specialise = oo,
+  microbio_dispo = oo,
+  germe_identifie = oo,
+  insuffisance_renale = oo,
+  allergie = oo
+)
 ```
 
 ```{r}
 #| label: macro_transang
 
 aftrans <- function(x) {
-zz <- table(x)
-trans <- transangph(zz[2],sum(zz))
-binf <- round(trans$binf*100,1)
-bsup <- round(trans$bsup*100,1)
-pc <- round(zz[[2]] / sum(zz) * 100, 1)
-pct <- paste0(zz[[2]] , " cas soit ", pc, "% [", binf, "% ; ", bsup, "%]")
-return(pct)
+  zz <- table(x)
+  trans <- transangph(zz[2], sum(zz))
+  pct <- paste0(zz[[2]], " cas soit ", trans$nb)
+  return(pct)
 }
 ```
 
@@ -74,14 +81,15 @@ return(pct)
 #| fig-cap: Corrélations internes
 #| eval: true
 zz <- tt |>
-  dplyr::select(!id) |> 
-  mutate_if(is.factor,as.numeric) |> 
-  remove_constant() 
+  dplyr::select(!id) |>
+  mutate_if(is.factor, as.numeric) |>
+  remove_constant()
 zz <- cor(zz, use = "pairwise.complete.obs")
-  ggcorrplot(zz, 
-             type = "lower", 
-             method = "square",
-             ggtheme = "theme_light")
+ggcorrplot(zz,
+  type = "lower",
+  method = "square",
+  ggtheme = "theme_light"
+)
 ```
 
 
@@ -115,9 +123,11 @@ $$PA_{\text{Moyenne}} = \frac{PA_{\text{Systolique}} + 2 PA_{\text{Diastolique}}
 
 tt |>
   dplyr::select(sexe:allergie) |>
-  tbl_summary(missing = "no",
-              statistic = stt,
-              value = ouinon) |>
+  tbl_summary(
+    missing = "no",
+    statistic = stt,
+    value = ouinon
+  ) |>
   add_n() |>
   bold_labels() |>
   modify_header(label ~ " ") |>
@@ -128,6 +138,7 @@ tt |>
 #| label: fig-pyr
 #| fig-cap: Pyramide des âges
 
+pca <- c(seq(100, 0, -20), seq(20, 100, 20))
 tt |>
   apyramid::age_pyramid(age, sexe,
     na.rm = TRUE,
@@ -140,6 +151,10 @@ tt |>
     x = "Âge"
   ) +
   theme_light() +
+  scale_y_continuous(
+    breaks = seq(-1, 1, .2),
+    labels = paste0(pca, " %")
+  ) +
   theme(
     plot.title = element_text(size = 14, face = "bold"),
     plot.subtitle = element_text(size = 12),
@@ -164,9 +179,11 @@ tt |>
 
 tt <- tt |>
   janitor::remove_constant(na.rm = TRUE)
+
+# Les variables constantes seront supprimées dans le reste du travail qui portera donc sur`r ncol(tt)` variables.
 ```
 
-Les variables constantes seront supprimées dans le reste du travail, il en reste `r ncol(tt)` variables.
+
 
 # Critère principal
 *La proportion de patients ayant eu une prise en charge adéquate à la sortie des Urgences conformément aux recommandations de la SPILF 2018.*
@@ -174,7 +191,7 @@ Les variables constantes seront supprimées dans le reste du travail, il en rest
 #| label: tbl-crit1
 #| tbl-cap: Critère principal
 
-tt |> 
+tt |>
   dplyr::select(pac_recos) |>
   tbl_summary(
     missing = "no",
@@ -200,7 +217,7 @@ tt |>
     by = pac_recos,
     missing = "no",
     statistic = stt,
-     value = ouinon
+    value = ouinon
   ) |>
   add_n() |>
   add_p(test = ptest) |>
@@ -216,7 +233,7 @@ tt |>
 #| fig-cap: Facteurs associés - analyse multivariée
 
 
-ll <- glm(pac_recos ~ sexe + age +ta , data = tt, family = "binomial") 
+ll <- glm(pac_recos ~ sexe + age + ta, data = tt, family = "binomial")
 #  forest_model()
 ```
 
@@ -229,7 +246,7 @@ ll <- glm(pac_recos ~ sexe + age +ta , data = tt, family = "binomial")
 #| label: tbl-crits1
 #| tbl-cap: Adéquation diagnostique
 
-tt |> 
+tt |>
   dplyr::select(conforme_spilf) |>
   tbl_summary(
     missing = "no",
@@ -247,9 +264,10 @@ Les diagnostics conformes aux recommandations de la \textsc{spif} représentent 
 #| fig-cap: Facteurs associés - analyse multivariée
 
 
-ll <- glm(conforme_spilf ~ sexe + age +ta + fc, data = tt, family = "binomial") 
+ll <- glm(conforme_spilf ~ sexe + age + ta + fc, data = tt, family = "binomial")
 #  forest_model()
 ```
+
 ## Objectif II
 *Identifier les examens complémentaires demandés aux urgences pour les patients ambulatoires avec diagnostic d’infection urinaire retenu aux urgences et évaluer leur pertinence selon les recommandations de la SPILF 2018.*
 
@@ -259,13 +277,14 @@ ll <- glm(conforme_spilf ~ sexe + age +ta + fc, data = tt, family = "binomial")
 #| label: tbl-examcomp1
 #| tbl-cap: Examens complémentaires
 
-tt |> 
-  dplyr::select(exam_comp:exam_dimagerie) |> 
+tt |>
+  dplyr::select(exam_comp:exam_dimagerie) |>
   tbl_summary(
     missing = "no",
     statistic = stt,
-    value = list(exam_comp = "Oui")) |> 
-        add_n() |>
+    value = ouinon
+  ) |>
+  add_n() |>
   bold_labels() |>
   modify_header(label ~ " ") |>
   pexptabph(exp = expx, nomfich = classeur, nomsheet = "examcomp1", lg = TRUE)
@@ -277,7 +296,7 @@ tt |>
 #| label: tbl-examcomp2
 #| tbl-cap: Pertinence des examens demandés aux urgences
 
-tt |> 
+tt |>
   dplyr::select(pertinence_exam_comp) |>
   tbl_summary(
     missing = "no",
@@ -299,13 +318,14 @@ Les demandes d'examens complémentaires conformes aux recommandations de la \tex
 #| label: tbl-examcomps1
 #| tbl-cap: Examens complémentaires demandés à la sortie des urgences
 
-tt |> 
-  dplyr::select(exam_com_sortie:imagerie) |> 
+tt |>
+  dplyr::select(exam_com_sortie:imagerie) |>
   tbl_summary(
     missing = "no",
     statistic = stt,
-    value = list(exam_com_sortie = "Oui")) |> 
-        add_n() |>
+    value = ouinon
+  ) |>
+  add_n() |>
   bold_labels() |>
   modify_header(label ~ " ") |>
   pexptabph(exp = expx, nomfich = classeur, nomsheet = "examcomps1", lg = TRUE)
@@ -319,7 +339,7 @@ tt |>
 #| label: tbl-examcomps2
 #| tbl-cap: Pertinence des examens demandés aux urgences
 
-tt |> 
+tt |>
   dplyr::select(pertinence_exam_sortie) |>
   tbl_summary(
     missing = "no",
@@ -338,13 +358,14 @@ tt |>
 #| label: tbl-spe1
 #| tbl-cap: Avis spécialistes
 
-tt |> 
-  dplyr::select(avis_specialise:specialite) |> 
+tt |>
+  dplyr::select(avis_specialise:specialite) |>
   tbl_summary(
     missing = "no",
     statistic = stt,
-    value = list(avis_specialise = "Oui")) |> 
-        add_n() |>
+    value = ouinon
+  ) |>
+  add_n() |>
   bold_labels() |>
   modify_header(label ~ " ") |>
   pexptabph(exp = expx, nomfich = classeur, nomsheet = "spe1", lg = TRUE)
@@ -362,14 +383,14 @@ Les demandes d'avis spécialisés représentent `r aftrans(tt$pertinence_exam_co
 #| tbl-cap: Microbiologie
 
 
-tt |> 
-  dplyr::select(microbio_dispo:germe) |> 
+tt |>
+  dplyr::select(microbio_dispo:germe) |>
   tbl_summary(
     missing = "no",
     statistic = stt,
-    value = list(microbio_dispo = "Oui",
-                 germe_identifie = "Oui")) |> 
-        add_n() |>
+    value = ouinon
+  ) |>
+  add_n() |>
   bold_labels() |>
   modify_header(label ~ " ") |>
   pexptabph(exp = expx, nomfich = classeur, nomsheet = "spe1", lg = TRUE)
@@ -379,9 +400,9 @@ tt |>
 #| label: fig-microb
 #| fig-cap: Germes retrouvés
 
-st <- paste0("N = ",length(na.omit(tt$germe)))
+st <- paste0("N = ", length(na.omit(tt$germe)))
 
-bardecph(tt,germe, titre = "Germes rerouvés", stitre = st)
+bardecph(tt, germe, titre = "Germes rerouvés", stitre = st)
 ```
 
 
@@ -392,16 +413,35 @@ bardecph(tt,germe, titre = "Germes rerouvés", stitre = st)
 #| tbl-cap: Efficacité de la prise en charge
 
 
-tt |> 
-  dplyr::select(pac_efficace) |> 
+tt |>
+  dplyr::select(pac_efficace) |>
   tbl_summary(
     missing = "no",
     statistic = stt,
-    value = list(pac_efficace = "Oui")) |> 
-        add_n() |>
+    value = list(pac_efficace = "Oui")
+  ) |>
+  add_n() |>
   bold_labels() |>
   modify_header(label ~ " ") |>
   pexptabph(exp = expx, nomfich = classeur, nomsheet = "effic", lg = TRUE)
 ```
 
-La prsie en charge a été jugée efficace pour `r aftrans(tt$pac_efficace)` (Pourcentage avec son intervalle de confiance à 95 %).
+La prise en charge a été jugée efficace pour `r aftrans(tt$pac_efficace)` (Pourcentage avec son intervalle de confiance à 95 %).
+
+
+
+```{r}
+#| label: fig-test
+#| fig-cap: test p-value
+#| eval: false
+library(ggpubr)
+
+patients |>
+  drop_na(igs2, admission) |>
+  ggplot() +
+  aes(x = admission, y = igs2, fill = admission) +
+  geom_boxplot() +
+  geom_jitter(aes(col = admission), width = 0.2, alpha = 0.9) +
+  theme_pubclean() +
+  geom_pwc(p.adjust.method = "holm", ref.group = "smur")
+```
