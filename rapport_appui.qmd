@@ -211,7 +211,7 @@ tt |>
 tt <- tt |>
   janitor::remove_constant(na.rm = TRUE)
 
-# Les variables constantes seront supprimées dans le reste du travail qui portera donc sur`r ncol(tt)` variables.
+# Les variables constantes sont supprimées dans le reste du travail qui portera donc sur`r ncol(tt)` variables.
 ```
 
 
@@ -561,10 +561,15 @@ rtt <- MCA(zz, graph = FALSE)
 #| label: fig-variance
 #| fig-cap: Qualité des résultats
 
-fviz_screeplot(rtt, addlabels = TRUE, ylim = c(0, 20), title = "Variance par axe")
+fviz_screeplot(rtt, addlabels = TRUE, 
+               hjust = 0.4,
+               geom = "bar",
+               ylim = c(0, 20),
+               ncp = 12,
+               title = "Variance par axe")
 ```
 
-La variance expliquée par les deux premiers axes n'est que de `r round(rtt$eig[2,3], 1)` %. Les résultats suivants sont donc à prendre avec précaution. L'analyse des axes 3 & 4 n'a pas montré de résultats pertinents.
+La variance expliquée par les deux premiers axes n'est que de `r round(rtt$eig[2,3], 1)` %. Les résultats suivants sont donc à prendre avec précaution. L'analyse des dimensions 3 & 4 n'a pas montré de résultats pertinents.
 
 ## Variables
 
@@ -641,3 +646,42 @@ fviz_dend(res, rect = TRUE, cex = 0.5)
 
 On retrouve trois classes : Féminin, masculin & cas graves sur l'âge, les antécédents etc.
 
+# Technique
+
+## Statistiques
+*Paragraphe statistique à copier en fin de Matériel & Méthodes.*
+
+e \gls{alpha} retenu sera de 0,05 & la \gls{puissance} de 0,8. Les analyses ont été réalisées avec le logiciel \textsc{r} version 4.3.0 (R Core Team, 2025).
+
+Vu le faible nombre de cas aucune hypothèse de normalité n' apu être faite. Les variables numériques sont présentées par leur médiane avec les quartiles & comparées grâce au test non paramétrique de \textsc{\gls{wilcox}}. Les variables discrètes sont présentées en nombre avec le pourcentage. Le test du $\chi^2$ sera utilisé sous réserve d'un effectif suffisant, à défaut le test exact de \textsc{\gls{fisher}}.
+
+
+### Taille de l'échantillon
+
+IL s'agit d'une étude purement descriptive sans test statistique. Il n'y a donc pas de calcul précis possible de taille d'échantillon nécessaire. Cependant, on peut estimer une taille correcte. En prenant le pire cas c'est à dire une proportion de \qty{50}{\percent} pour l'objectif principal & avec une erreur acceptable de \qty{10}{\percent}, on obtient une taille d'échantillon de \num{106} cas nécessaires dans l'échantillon.
+
+
+### Qualité de l'échantillon
+
+
+UN décompte des données manquantes sera réalisé. Les variables comportant trop de données manquantes ou non utilisables n'ont pas prises en compte après validation par le promoteur.
+
+Une recherche de corrélation anormale entre les variables a été réalisée.
+
+### Description de la population
+
+Un tableau descriptif présentant les données démographiques de la population sera présenté.
+
+### Objectif principal
+
+L'adéquation de la prise en charge est définie par le promoteur pour chaque cas . Le résultat sera présenté par le nombre de cas avec le pourcentage de la population totale & son intervalle de confiance (calcul après transformation angulaire). Une recherche de facteurs pouvant influer l'adéquation de la prise en charge sera tout d'abord réalisée par une analyse univariée portant sur toutes les variables décrivant la population. Les variables significatives  p-value < \num{0.2}) sont ensuite incluses dans un modèle de régression logistique pour rechercher des facteurs indépendants. Une recherche du meilleur modèle sera réalisée par step-by-step descendant.
+
+
+### Objectifs secondaires
+
+Tous les objectifs secondaire sont présentés de la même manière :  le nombre de cas corrects avec le pourcentage & son intervalle de confiance à \qty{95}{\percent}.
+
+
+### Analyse factorielle
+
+Une description de la population par analyse en composante multiple (MCA) a été réalisée après imputation des données manquantes. L'analyse présentée n'a porté que sur les deux premières dimensions, les dimensions 3 & 4 n'apportant pas de résultat intéressant. Une classification non supervisée (méthode des k-means, trois classes, cinquante itérations maximum) a été réalisée sur les individus. Les variables numériques ont été discrétisées pour cette analyse.
