@@ -43,7 +43,15 @@ tt <- read_ods("datas/appui.ods", sheet = "donnees", col_types = NULL, na = c("N
       age == "< 65 ans" ~ NA,
       .default = fragilite
     )
-  )
+  ) |>
+  mutate(germe = str_replace(tt$germe, "ae", "æ")) |>
+  mutate(germe = as.factor(germe)) |>
+  ## Réordonnancement de tt$duree_tt
+  mutate(duree_tt = fct_relevel(
+    duree_tt,
+    "1 jour", "7 jours", "10 jours", "14 jours", "Autre"
+  ))
+
 var_label(tt) <- bn$nom
 
 tt <- tt |>

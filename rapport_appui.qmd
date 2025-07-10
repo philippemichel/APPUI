@@ -1,5 +1,5 @@
 ---
-title: "Rapport statistique V0.2"
+title: "Rapport statistique V0.3"
 cache: false
 ---
 
@@ -17,8 +17,8 @@ library(ggsci)
 library(janitor)
 library(tidyverse)
 library(missMDA)
-# library(FactoMineR)
-# library(factoextra)
+library(FactoMineR)
+library(factoextra)
 library(visdat)
 library(kableExtra)
 library(gtsummary)
@@ -35,19 +35,18 @@ if (expx) {
 
 # sessionInfo()
 theme_gtsummary_language(language = "fr", decimal.mark = ",")
-theme_gtsummary_journal(journal = "jama")
+#theme_gtsummary_journal(journal = "jama")
 options(OutDec = ",")
 ptest <- list(all_continuous() ~ "t.test", all_categorical() ~ "chisq.test")
 stt <- list(
   all_continuous() ~ "{mean} ({sd})",
-  all_categorical() ~ "{n}/{N} ({p}%)"
+  all_categorical() ~ "{n} ({p}%)"
 )
 load("datas/appui.RData")
 #
 oo <- "Oui"
 ouinon <- list(
   antecedent_urinaire = oo,
-  fragilite = oo,
   immunodepression = oo,
   exam_comp = oo,
   grossesse = oo,
@@ -82,16 +81,42 @@ aftrans <- function(x) {
 #| eval: true
 zz <- tt |>
   dplyr::select(!id) |>
+  dplyr::select(!starts_with("si_")) |>
   mutate_if(is.factor, as.numeric) |>
+  
   remove_constant()
-zz <- cor(zz, use = "pairwise.complete.obs")
-ggcorrplot(zz,
+zzf <- cor(zz, use = "pairwise.complete.obs")
+ggcorrplot(zzf,
   type = "lower",
   method = "square",
-  ggtheme = "theme_light"
-)
+  ggtheme = "theme_light") +
+  labs(title = "Corrélations",
+      subtitle = "",
+      x = "",
+      y = "",
+      caption = "",
+      fill = "") +
+  theme_light() +
+  theme(
+    plot.title = element_text(size = 14, face = "bold"),
+    plot.subtitle = element_text(size = 12),
+    axis.title.x = element_text(size = 12),
+    legend.title = element_text(size = 12),
+    axis.title.y = element_text(
+      size = 12,
+      angle = 90,
+      vjust = .5
+    ),
+  axis.text.x = element_text(
+      angle = 90,
+      vjust = .5,
+      size = 5),
+  axis.text.y = element_text(size = 5),
+  legend.position = "right"
+  )
 ```
 
+On ne met pas en évidence de corrélation anormale ou gênante. 
 
 ## Données manquantes
 
@@ -104,6 +129,8 @@ tt |>
   vis_dat(palette = "qual")
 ```
 
+L'item `Fragilité` est très peu rempli ainsi que dans une moindre mesure `allergie`. les autres items comportant de nombreuses données manquantes sont celles commençant par `si\dots` ce qui est normal.
+
 # Descriptif
 
 ::: {.callout-note}
@@ -113,7 +140,7 @@ Dans tous les tableaux, pour les variables en `Oui/Non` seules les réponses `Ou
 
 Les données concernent `r nrow(tt)` cas & pour `r ncol(tt)` variables.
 
-La $PA_{m}$ a été calculée selon l'approximation usuelle :
+La $PA_{m}$ a été approchée selon l'approximation usuelle :
 
 $$PA_{\text{Moyenne}} = \frac{PA_{\text{Systolique}} + 2 PA_{\text{Diastolique}}}{3}$$. 
 
@@ -128,7 +155,11 @@ tt |>
     statistic = stt,
     value = ouinon
   ) |>
+      add_stat_label(
+    location = "column"
+  ) |>
   add_n() |>
+  add_ci() |>
   bold_labels() |>
   modify_header(label ~ " ") |>
   pexptabph(exp = expx, nomfich = classeur, nomsheet = "demog", lg = TRUE)
@@ -197,6 +228,7 @@ tt |>
     missing = "no",
   ) |>
   add_n() |>
+  add_ci() |>
   bold_labels() |>
   modify_header(label ~ " ") |>
   pexptabph(exp = expx, nomfich = classeur, nomsheet = "crit1", lg = TRUE)
@@ -216,26 +248,37 @@ tt |>
   tbl_summary(
     by = pac_recos,
     missing = "no",
-    statistic = stt,
-    value = ouinon
+    value = ouinon,
+    percent = "row"
   ) |>
+  modify_spanning_header(c("stat_1", "stat_2") ~ "**Conforme aux aux recommandations de la SPILF**") |> 
   add_n() |>
   add_p(test = ptest) |>
+    add_stat_label(
+    location = "column"
+  ) |> 
   bold_labels() |>
   bold_p() |>
   modify_header(label ~ " ") |>
-  pexptabph(exp = expx, nomfich = classeur, nomsheet = "critfact1", lg = TRUE)
+  separate_p_footnotes() |> 
+  gexptabph(exp = expx, nomfich = classeur, nomsheet = "critfact1")
 ```
 
 
 ```{r}
-#| label: fig-princmulti
+#| label: tbl-princmulti
 #| fig-cap: Facteurs associés - analyse multivariée
 
 
-ll <- glm(pac_recos ~ sexe + age + ta, data = tt, family = "binomial")
-#  forest_model()
+glm(pac_recos ~ sexe + age + fc +immunodepression , data = tt, family = "binomial") |> 
+tbl_regression(exponentiate = TRUE) |> 
+    bold_labels() |>
+  bold_p() |>
+  modify_header(label ~ " ") |>
+  gexptabph(exp = expx, nomfich = classeur, nomsheet = "critfactmulti")
 ```
+
+L'analyse en régression confirme que la prise en charge des patients de plus de 75 ans est environ quatre fois moins souvent conforme aux recommandations que pour les patients plus jeunes. Les antécédents urinaires et l'immunodépression ne peuvent être analysés faute de cas positifs.
 
 # Objectif secondaires
 
@@ -252,7 +295,11 @@ tt |>
     missing = "no",
   ) |>
   add_n() |>
+      add_stat_label(
+    location = "column"
+  ) |>
   bold_labels() |>
+  add_ci() |>
   modify_header(label ~ " ") |>
   pexptabph(exp = expx, nomfich = classeur, nomsheet = "crit1", lg = TRUE)
 ```
@@ -285,6 +332,9 @@ tt |>
     value = ouinon
   ) |>
   add_n() |>
+      add_stat_label(
+    location = "column"
+  ) |>
   bold_labels() |>
   modify_header(label ~ " ") |>
   pexptabph(exp = expx, nomfich = classeur, nomsheet = "examcomp1", lg = TRUE)
@@ -302,6 +352,10 @@ tt |>
     missing = "no",
   ) |>
   add_n() |>
+      add_stat_label(
+    location = "column"
+  ) |>
+  add_ci() |>
   bold_labels() |>
   modify_header(label ~ " ") |>
   pexptabph(exp = expx, nomfich = classeur, nomsheet = "examcomp2", lg = TRUE)
@@ -326,6 +380,9 @@ tt |>
     value = ouinon
   ) |>
   add_n() |>
+      add_stat_label(
+    location = "column"
+  ) |>
   bold_labels() |>
   modify_header(label ~ " ") |>
   pexptabph(exp = expx, nomfich = classeur, nomsheet = "examcomps1", lg = TRUE)
@@ -344,7 +401,11 @@ tt |>
   tbl_summary(
     missing = "no",
   ) |>
+  add_ci() |>
   add_n() |>
+      add_stat_label(
+    location = "column"
+  ) |>
   bold_labels() |>
   modify_header(label ~ " ") |>
   pexptabph(exp = expx, nomfich = classeur, nomsheet = "examcomps2", lg = TRUE)
@@ -366,6 +427,9 @@ tt |>
     value = ouinon
   ) |>
   add_n() |>
+      add_stat_label(
+    location = "column"
+  ) |>
   bold_labels() |>
   modify_header(label ~ " ") |>
   pexptabph(exp = expx, nomfich = classeur, nomsheet = "spe1", lg = TRUE)
@@ -391,6 +455,9 @@ tt |>
     value = ouinon
   ) |>
   add_n() |>
+      add_stat_label(
+    location = "column"
+  ) |>
   bold_labels() |>
   modify_header(label ~ " ") |>
   pexptabph(exp = expx, nomfich = classeur, nomsheet = "spe1", lg = TRUE)
@@ -402,7 +469,7 @@ tt |>
 
 st <- paste0("N = ", length(na.omit(tt$germe)))
 
-bardecph(tt, germe, titre = "Germes rerouvés", stitre = st)
+lollipph(tt,germe, titre = paste0("Germes retrouvés - ", st))
 ```
 
 
@@ -421,6 +488,10 @@ tt |>
     value = list(pac_efficace = "Oui")
   ) |>
   add_n() |>
+  add_ci() |>
+      add_stat_label(
+    location = "column"
+  ) |>
   bold_labels() |>
   modify_header(label ~ " ") |>
   pexptabph(exp = expx, nomfich = classeur, nomsheet = "effic", lg = TRUE)
@@ -436,7 +507,13 @@ La prise en charge a été jugée efficace pour `r aftrans(tt$pac_efficace)` (Po
 #| eval: false
 library(ggpubr)
 
-patients |>
+patients |>## Recodage de tt$ta en tt$ta_rec
+tt$ta_rec <- cut(tt$ta,
+  include.lowest = TRUE,
+  right = FALSE,
+  dig.lab = 4,
+  breaks = c(0, 60, 80, 100, 120, 200)
+)
   drop_na(igs2, admission) |>
   ggplot() +
   aes(x = admission, y = igs2, fill = admission) +
@@ -445,3 +522,122 @@ patients |>
   theme_pubclean() +
   geom_pwc(p.adjust.method = "holm", ref.group = "smur")
 ```
+
+# Analyse factorielle
+
+On réalise une analyse en composante principale pour tenter de mieux décrire la population & de définir des groupes homogènes de patients. Les variables numériques ont été discréditées.
+
+```{r}
+#| label: mca-prepa
+
+zz <- tt |> 
+  dplyr::select(-c(id, fc, grossesse,traitement_propose,specialite,germe_identifie,microbio_dispo,si_autre_spe,exam_comp,germe )) |> 
+  dplyr::select(!starts_with("si_")) |> 
+  remove_constant(na.rm = TRUE) |> 
+  mutate(ta = cut(ta,
+  include.lowest = TRUE,
+  right = FALSE,
+  dig.lab = 4,
+  breaks = c(0, 80, 100, 120, 200), 
+  labels = (c("PAm < 80",  "PAm 80-100", "PAm 100-120", "PAm > 120")
+))) |> 
+  ## Recodage de tt$temperature en tt$temperature_rec
+mutate(temperature = cut(temperature,
+  include.lowest = TRUE,
+  right = FALSE,
+  dig.lab = 4,
+  breaks = c(0, 36, 37, 38,  50),
+  labels = c("<36°", "36-37°", "37-38°", "> 38°")
+)) |> 
+   mutate_if(is.character, as.factor) 
+
+nn <- 1
+zz <- imputeMCA(zz, ncp = nn)
+zz <- as.data.frame(zz$completeObs)
+rtt <- MCA(zz, graph = FALSE)
+```
+
+```{r}
+#| label: fig-variance
+#| fig-cap: Qualité des résultats
+
+fviz_screeplot(rtt, addlabels = TRUE, ylim = c(0, 20), title = "Variance par axe")
+```
+
+La variance expliquée par les deux premiers axes n'est que de `r round(rtt$eig[2,3], 1)` %. Les résultats suivants sont donc à prendre avec précaution. L'analyse des axes 3 & 4 n'a pas montré de résultats pertinents.
+
+## Variables
+
+```{r}
+#| label: fig-var1
+#| fig-cap: Variables
+#| fig-asp: .8
+
+fviz_mca_var(rtt, axes = c(1,2),col.var = "contrib", repel = TRUE,
+             select.var = list(contrib = 20)) +
+  labs(title = "Variables") +
+  theme_light() 
+```
+
+L'axe 1 (abscisse) présente une orientation bénin/grave avec en particulier les groupes masculin, fébrile, traitement long. La prise en charge conforme aux recommandation semble plus liée au cas féminin, apyrétiques, cystites simples.
+
+
+## Individus
+
+```{r}
+#| label: fig-indsexe
+#| fig-cap: Répartion des individus selon le sexe
+#| fig-asp: .8
+
+fviz_mca_ind(rtt, habillage = "sexe", repel = TRUE,
+             geom = "point", addEllipse = TRUE) +
+  labs(title = "Répartition des individus selon le sexe") +
+  theme_light()
+```
+
+
+
+```{r}
+#| label: fig-indtemp
+#| fig-cap: Répartion des individus selon la température
+#| fig-asp: .8
+
+fviz_mca_ind(rtt, habillage = "temperature", repel = TRUE,
+             geom = "point", addEllipse = TRUE) +
+  labs(title = "Répartition des individus selon la température") +
+  theme_light()
+```
+
+Le sexe semble être la variable la plus discriminante.
+
+## Classification
+
+```{r}
+#| label: fig-kmean
+#| fig-cap: Classification des individus
+#| #| fig-asp: .8
+
+zzc <- zz |> 
+  mutate_if(is.factor, as.numeric)
+# 2. Compute k-means
+set.seed(123)
+km.res <- kmeans(scale(zzc), 3, nstart = 25)
+# 3. Visualize
+fviz_cluster(km.res, data = zzc,
+             ggtheme = theme_minimal(),
+             main = "Classification non supervisée des individus"
+             )
+```
+
+```{r}
+#| label: fig-dend
+#| fig-cap: Classification des individus
+#| #| fig-asp: .8
+#| eval: false
+res <- hcut(zzc, k = 3, stand = TRUE)
+# Visualize
+fviz_dend(res, rect = TRUE, cex = 0.5)
+```
+
+On retrouve trois classes : Féminin, masculin & cas graves sur l'âge, les antécédents etc.
+
