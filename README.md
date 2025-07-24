@@ -17,7 +17,8 @@
 Étude monocentrique & rétrospective
 
 
-**19/06/2025** Plan d'analyse des données v1.0
+- **19/06/2025** Plan d'analyse des données v1.0
+- **24/07/2025** <rzpport d'analyse statistique V1.0
 
 ## Fichiers
 
@@ -25,7 +26,7 @@
 - **entete.tex** : entête $\LaTeX$ pour les fichiers Quarto (réglages...), lu par _quarto.yml
 - **plan_analyse.qmd** : plan d'analyse des données
 - **import.R** : Routine d'importation & de mise en forme des données
-- **Rapport_appui** : Rapport statistique (ébauche)
+- **Rapport_appui** : Rapport statistique 
 
 
 

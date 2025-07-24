@@ -47,10 +47,20 @@ tt <- read_ods("datas/appui.ods", sheet = "donnees", col_types = NULL, na = c("N
   mutate(germe = str_replace(tt$germe, "ae", "æ")) |>
   mutate(germe = as.factor(germe)) |>
   ## Réordonnancement de tt$duree_tt
-  mutate(duree_tt = fct_relevel(
-    duree_tt,
-    "1 jour", "7 jours", "10 jours", "14 jours", "Autre"
+  mutate(duree_tt = fct_recode(duree_tt,
+    "> 10 jours" = "14 jours",
+    "> 10 jours" = "15 jours",
+    "> 10 jours" = "21 jours",
+    "2-3 jours" = "2jours",
+    "2-3 jours" = "3 jours",
+    "5-6 jours" = "5 jours",
+    "5-6 jours" = "6 jours"
   ))
+mutate(duree_tt = fct_relevel(
+  duree_tt,
+  "1 jour", "2-3 jours", "5-6 jours", "7 jours", "10 jours",
+  "> 10 jours"
+))
 
 var_label(tt) <- bn$nom
 

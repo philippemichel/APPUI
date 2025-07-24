@@ -1,5 +1,5 @@
 ---
-title: "Rapport statistique V0.3"
+title: "Rapport statistique V1.0"
 cache: false
 ---
 
@@ -21,12 +21,13 @@ library(FactoMineR)
 library(factoextra)
 library(visdat)
 library(kableExtra)
+library(readODS)
 library(gtsummary)
 library(forestmodel)
 library(labelled)
 #
 classeur <- "appui.ods"
-expx <- FALSE
+expx <- TRUE
 if (expx) {
   file.create(classeur)
   file.remove(classeur)
@@ -49,13 +50,13 @@ ouinon <- list(
   antecedent_urinaire = oo,
   immunodepression = oo,
   exam_comp = oo,
-  grossesse = oo,
   exam_com_sortie = oo,
   avis_specialise = oo,
   microbio_dispo = oo,
   germe_identifie = oo,
   insuffisance_renale = oo,
-  allergie = oo
+  allergie = oo,
+  fragilite = oo
 )
 ```
 
@@ -129,7 +130,7 @@ tt |>
   vis_dat(palette = "qual")
 ```
 
-L'item `Fragilité` est très peu rempli ainsi que dans une moindre mesure `allergie`. les autres items comportant de nombreuses données manquantes sont celles commençant par `si\dots` ce qui est normal.
+L'item `Fragilité` est très peu rempli ainsi que dans une moindre mesure `allergie`. les autres items comportant de nombreuses données manquantes sont celles commençant par `si\dots` ce qui est normal ou ceux concernant les exemnnes etc. après la sortie. 
 
 # Descriptif
 
@@ -179,7 +180,7 @@ tt |>
   ) +
   labs(
     title = "Pyramide des âges",
-    x = "Âge"
+    x = ""
   ) +
   theme_light() +
   scale_y_continuous(
@@ -278,7 +279,16 @@ tbl_regression(exponentiate = TRUE) |>
   gexptabph(exp = expx, nomfich = classeur, nomsheet = "critfactmulti")
 ```
 
-L'analyse en régression confirme que la prise en charge des patients de plus de 75 ans est environ quatre fois moins souvent conforme aux recommandations que pour les patients plus jeunes. Les antécédents urinaires et l'immunodépression ne peuvent être analysés faute de cas positifs.
+L'analyse en régression confirme que la prise en charge des patients de plus de 75 ans est environ trois fois moins souvent conforme aux recommandations que pour les patients les plus jeunes.
+
+```{r}
+#| label: fig-ageprinc
+#| fig-cap: Conformité de la prise en charge conforme selon l'âge du patient
+
+barouiph(dfx = tt, testx = age, varx = pac_recos, valx = "Oui",
+  titre = "Conformité de la\n prise en charge selon l'âge du patient")
+```
+
 
 # Objectif secondaires
 
@@ -301,7 +311,7 @@ tt |>
   bold_labels() |>
   add_ci() |>
   modify_header(label ~ " ") |>
-  pexptabph(exp = expx, nomfich = classeur, nomsheet = "crit1", lg = TRUE)
+  pexptabph(exp = expx, nomfich = classeur, nomsheet = "crits1", lg = TRUE)
 ```
 
 Les diagnostics conformes aux recommandations de la \textsc{spif} représentent `r aftrans(tt$conforme_spilf)` (Pourcentage avec son intervalle de confiance à 95 %)
@@ -337,7 +347,7 @@ tt |>
   ) |>
   bold_labels() |>
   modify_header(label ~ " ") |>
-  pexptabph(exp = expx, nomfich = classeur, nomsheet = "examcomp1", lg = TRUE)
+  gexptabph(exp = expx, nomfich = classeur, nomsheet = "examcomp1", lg = FALSE)
 ```
 
 ### Pertinence des examens demandés
@@ -358,10 +368,13 @@ tt |>
   add_ci() |>
   bold_labels() |>
   modify_header(label ~ " ") |>
-  pexptabph(exp = expx, nomfich = classeur, nomsheet = "examcomp2", lg = TRUE)
+  pexptabph(exp = expx, nomfich = classeur, nomsheet = "examcomp2", lg = FALSE)
 ```
 
 Les demandes d'examens complémentaires conformes aux recommandations de la \textsc{spif} représentent `r aftrans(tt$pertinence_exam_comp)` (Pourcentage avec son intervalle de confiance à 95 %).
+
+
+
 
 ## Objectif III
 *Identifier les examens complémentaires prescrits à la sortie des urgences pour les patients ambulatoires avec diagnostic d’infection urinaire retenu aux urgences et évaluer leur pertinence selon les recommandations de la spif 2018.*
@@ -385,7 +398,7 @@ tt |>
   ) |>
   bold_labels() |>
   modify_header(label ~ " ") |>
-  pexptabph(exp = expx, nomfich = classeur, nomsheet = "examcomps1", lg = TRUE)
+  gexptabph(exp = expx, nomfich = classeur, nomsheet = "examcomps1", lg = TRUE)
 
 # Attention ! Si autre à vérifier
 ```
@@ -421,6 +434,7 @@ tt |>
 
 tt |>
   dplyr::select(avis_specialise:specialite) |>
+  mutate(specialite = fct_infreq(specialite)) |> 
   tbl_summary(
     missing = "no",
     statistic = stt,
@@ -460,16 +474,46 @@ tt |>
   ) |>
   bold_labels() |>
   modify_header(label ~ " ") |>
-  pexptabph(exp = expx, nomfich = classeur, nomsheet = "spe1", lg = TRUE)
+  pexptabph(exp = expx, nomfich = classeur, nomsheet = "germes1", lg = TRUE)
 ```
 
 ```{r}
 #| label: fig-microb
 #| fig-cap: Germes retrouvés
 
-st <- paste0("N = ", length(na.omit(tt$germe)))
+st <- paste0("Germes retrouvés aux urgences (N = ", length(na.omit(tt$germe)), ")")
 
-lollipph(tt,germe, titre = paste0("Germes retrouvés - ", st))
+tt |> 
+  drop_na(germe) |>
+  group_by(germe) |> 
+  summarise(n = n()) |> 
+  mutate(gram = ifelse(germe %in% c("Corynebacterium aurimucosum", "Enterococcus fæcalis", "Enterococcus hiræ", "Staphylococcus aureus", "Staphylococcus saprophyticus", "Streptococcus aggalactiæ" , "Streptococcus anginosus") , "Gram +", "Gram -")) |> 
+  ggplot() + 
+  aes(x = fct_reorder(germe,n), y = n, color = gram) +
+ geom_segment(aes(x = fct_reorder(germe,n),xend = fct_reorder(germe,n),y = 0,, yend = n)) +
+  geom_point(size = 3) +
+  coord_flip() +
+  labs(title = "Germes retrouvés",
+      subtitle = "",
+      y = "n",
+      caption = st,
+      fill = "") +
+  theme_light() +
+  scale_fill_jama() +
+  theme(
+    plot.title = element_text(size = 14, face = "bold"),
+    plot.subtitle = element_text(size = 12),
+    axis.title.y = element_blank(),
+    legend.title = element_blank(),
+    axis.title.x = element_text(
+      size = 10,
+      angle = 0,
+      vjust = .5
+    ),
+  axis.text.x = element_text(size = 10),
+  axis.text.y = element_text(size = 12),
+  legend.position = "right"
+  )
 ```
 
 
@@ -481,6 +525,7 @@ lollipph(tt,germe, titre = paste0("Germes retrouvés - ", st))
 
 
 tt |>
+  
   dplyr::select(pac_efficace) |>
   tbl_summary(
     missing = "no",
@@ -531,7 +576,7 @@ On réalise une analyse en composante principale pour tenter de mieux décrire l
 #| label: mca-prepa
 
 zz <- tt |> 
-  dplyr::select(-c(id, fc, grossesse,traitement_propose,specialite,germe_identifie,microbio_dispo,si_autre_spe,exam_comp,germe )) |> 
+  dplyr::select(-c(id, fc, grossesse,traitement_propose,specialite,germe_identifie,microbio_dispo,exam_comp,germe,microbio_sortie)) |> 
   dplyr::select(!starts_with("si_")) |> 
   remove_constant(na.rm = TRUE) |> 
   mutate(ta = cut(ta,
@@ -584,7 +629,7 @@ fviz_mca_var(rtt, axes = c(1,2),col.var = "contrib", repel = TRUE,
   theme_light() 
 ```
 
-L'axe 1 (abscisse) présente une orientation bénin/grave avec en particulier les groupes masculin, fébrile, traitement long. La prise en charge conforme aux recommandation semble plus liée au cas féminin, apyrétiques, cystites simples.
+Seules les variables les plus pertinentes sont présentées. L'abcisse présente une orientation femme/homme. L'ordonné semble être orientée plus selon la complexité du cas & ce plutôt chez l'homme (les cas chez les femmes semblent être globalement plus simples). 
 
 
 ## Individus
@@ -606,6 +651,7 @@ fviz_mca_ind(rtt, habillage = "sexe", repel = TRUE,
 #| label: fig-indtemp
 #| fig-cap: Répartion des individus selon la température
 #| fig-asp: .8
+#| eval: false
 
 fviz_mca_ind(rtt, habillage = "temperature", repel = TRUE,
              geom = "point", addEllipse = TRUE) +
@@ -639,19 +685,19 @@ fviz_cluster(km.res, data = zzc,
 #| fig-cap: Classification des individus
 #| #| fig-asp: .8
 #| eval: false
-res <- hcut(zzc, k = 3, stand = TRUE)
+res <- hcut(zzc, k = 2, stand = TRUE)
 # Visualize
 fviz_dend(res, rect = TRUE, cex = 0.5)
 ```
 
-On retrouve trois classes : Féminin, masculin & cas graves sur l'âge, les antécédents etc.
+Une classification non supervisée ne donne pas de résultat intéressant.
 
 # Technique
 
 ## Statistiques
 *Paragraphe statistique à copier en fin de Matériel & Méthodes.*
 
-e \gls{alpha} retenu sera de 0,05 & la \gls{puissance} de 0,8. Les analyses ont été réalisées avec le logiciel \textsc{r} version 4.3.0 (R Core Team, 2025).
+le \gls{alpha} retenu était de 0,05 & la \gls{puissance} de 0,8. Les analyses ont été réalisées avec le logiciel \textsc{r} version 4.3.0 (R Core Team, 2025).
 
 Vu le faible nombre de cas aucune hypothèse de normalité n' apu être faite. Les variables numériques sont présentées par leur médiane avec les quartiles & comparées grâce au test non paramétrique de \textsc{\gls{wilcox}}. Les variables discrètes sont présentées en nombre avec le pourcentage. Le test du $\chi^2$ sera utilisé sous réserve d'un effectif suffisant, à défaut le test exact de \textsc{\gls{fisher}}.
 
@@ -684,4 +730,4 @@ Tous les objectifs secondaire sont présentés de la même manière :  le nombre
 
 ### Analyse factorielle
 
-Une description de la population par analyse en composante multiple (MCA) a été réalisée après imputation des données manquantes. L'analyse présentée n'a porté que sur les deux premières dimensions, les dimensions 3 & 4 n'apportant pas de résultat intéressant. Une classification non supervisée (méthode des k-means, trois classes, cinquante itérations maximum) a été réalisée sur les individus. Les variables numériques ont été discrétisées pour cette analyse.
+Une description de la population par analyse en composante multiple (MCA) a été réalisée après imputation des données manquantes. L'analyse présentée n'a porté que sur les deux premières dimensions, les dimensions 3 & 4 n'apportant pas de résultat intéressant. Une classification non supervisée (méthode des k-means, trois classes, cinquante itérations maximum) a été tentée sur les individus. Les variables numériques ont été discrétisées pour cette analyse.
