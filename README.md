@@ -18,7 +18,7 @@
 
 
 - **19/06/2025** Plan d'analyse des données v1.0
-- **24/07/2025** <rzpport d'analyse statistique V1.0
+- **24/07/2025** rapport d'analyse statistique V1.2
 
 ## Fichiers
 

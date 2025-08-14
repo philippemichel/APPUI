@@ -12,6 +12,7 @@ library(tidyverse)
 library(janitor)
 library(readODS)
 library(labelled)
+rm(list = ls())
 #
 pam <- function(pp) {
   pa <- str_split_fixed(pp, "/", 2)
@@ -44,7 +45,7 @@ tt <- read_ods("datas/appui.ods", sheet = "donnees", col_types = NULL, na = c("N
       .default = fragilite
     )
   ) |>
-  mutate(germe = str_replace(tt$germe, "ae", "æ")) |>
+  mutate(germe = str_replace(germe, "ae", "æ")) |>
   mutate(germe = as.factor(germe)) |>
   ## Réordonnancement de tt$duree_tt
   mutate(duree_tt = fct_recode(duree_tt,
@@ -55,15 +56,16 @@ tt <- read_ods("datas/appui.ods", sheet = "donnees", col_types = NULL, na = c("N
     "2-3 jours" = "3 jours",
     "5-6 jours" = "5 jours",
     "5-6 jours" = "6 jours"
+  )) |>
+  mutate(duree_tt = fct_relevel(
+    duree_tt,
+    "1 jour", "2-3 jours", "5-6 jours", "7 jours", "10 jours",
+    "> 10 jours"
   ))
-mutate(duree_tt = fct_relevel(
-  duree_tt,
-  "1 jour", "2-3 jours", "5-6 jours", "7 jours", "10 jours",
-  "> 10 jours"
-))
 
 var_label(tt) <- bn$nom
 
 tt <- tt |>
+  remove_constant(na.rm = TRUE) |>
   dplyr::select(!starts_with("date"))
 save(tt, file = "datas/appui.RData")

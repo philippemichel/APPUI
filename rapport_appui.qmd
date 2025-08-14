@@ -1,5 +1,5 @@
 ---
-title: "Rapport statistique V1.0"
+title: "Rapport statistique V1.2"
 cache: false
 ---
 
@@ -84,7 +84,6 @@ zz <- tt |>
   dplyr::select(!id) |>
   dplyr::select(!starts_with("si_")) |>
   mutate_if(is.factor, as.numeric) |>
-  
   remove_constant()
 zzf <- cor(zz, use = "pairwise.complete.obs")
 ggcorrplot(zzf,
@@ -237,6 +236,82 @@ tt |>
 
 Les cas conformes représentent `r aftrans(tt$pac_recos)` (Pourcentage avec son intervalle de confiance à 95 %)
 
+## Diagnostic
+
+```{r}
+#| label: tbl-diag
+#| tbl-cap: Diagnostics retenus & conformité aux recommandations
+
+tt |> 
+  dplyr::select(diagnostic_retenu, pac_recos) |> 
+    tbl_summary(
+  by = pac_recos,
+    missing = "no",
+  percent = "row"
+  ) |>
+    modify_spanning_header(c("stat_1", "stat_2") ~ "**Conforme aux aux recommandations de la SPILF**") |> 
+  add_n() |>
+  add_overall(statistic = ~"{n}") |> 
+    add_p(test = ptest) |>
+    add_stat_label(
+    location = "column"
+  ) |> 
+  bold_labels() |>
+  bold_p() |>
+  bold_labels() |>
+  modify_header(label ~ " ") |>
+  pexptabph(exp = expx, nomfich = classeur, nomsheet = "diag", lg = TRUE)
+
+```
+
+```{r}
+#| label: fig-diag
+#| fig-cap:  Diagnostics retenus & conformité aux recommandations
+
+zz <- tt |> 
+  group_by(pac_recos) |> 
+ count(diagnostic_retenu) |> 
+  dplyr::filter(pac_recos == "Oui")
+
+nn <- tt |> 
+  drop_na(pac_recos) |> 
+  count(diagnostic_retenu)
+
+zz$nn <- nn$n
+
+zz |> 
+  mutate(pc = 100*n/nn) |> 
+    ggplot() + 
+  aes(x = fct_reorder(diagnostic_retenu,pc), y = pc) +
+ geom_segment(aes(x = fct_reorder(diagnostic_retenu,pc),xend = fct_reorder(diagnostic_retenu,pc),y = 0,, yend = pc)) +
+  geom_point(size = 3) +
+  coord_flip() +
+  labs(title = "Conformité aux recommandations\n selon le diagnostic (%)",
+      subtitle = "",
+      y = "%",
+      caption = "",
+      fill = "") +
+  theme_light() +
+  scale_fill_jama() +
+  theme(
+    plot.title = element_text(size = 11, face = "bold"),
+    axis.title.y = element_blank(),
+    legend.title = element_blank(),
+    axis.title.x = element_text(
+      size = 10,
+      angle = 0,
+      vjust = .5
+    ),
+  axis.text.x = element_text(size = 10),
+  axis.text.y = element_text(size = 10),
+  legend.position = "right"
+  )
+```
+
+
+
+
+
 ## Facteurs associés
 
 ```{r}
@@ -271,7 +346,7 @@ tt |>
 #| fig-cap: Facteurs associés - analyse multivariée
 
 
-glm(pac_recos ~ sexe + age + fc +immunodepression , data = tt, family = "binomial") |> 
+glm(pac_recos ~ sexe + age + temperature +immunodepression , data = tt, family = "binomial") |> 
 tbl_regression(exponentiate = TRUE) |> 
     bold_labels() |>
   bold_p() |>
@@ -328,7 +403,7 @@ ll <- glm(conforme_spilf ~ sexe + age + ta + fc, data = tt, family = "binomial")
 ## Objectif II
 *Identifier les examens complémentaires demandés aux urgences pour les patients ambulatoires avec diagnostic d’infection urinaire retenu aux urgences et évaluer leur pertinence selon les recommandations de la SPILF 2018.*
 
-### Examens demandés aux urgences
+### Examens demandés aux urgences & pertinence
 
 ```{r}
 #| label: tbl-examcomp1
@@ -350,7 +425,6 @@ tt |>
   gexptabph(exp = expx, nomfich = classeur, nomsheet = "examcomp1", lg = FALSE)
 ```
 
-### Pertinence des examens demandés
 
 ```{r}
 #| label: tbl-examcomp2
@@ -449,7 +523,7 @@ tt |>
   pexptabph(exp = expx, nomfich = classeur, nomsheet = "spe1", lg = TRUE)
 ```
 
-Les demandes d'avis spécialisés représentent `r aftrans(tt$pertinence_exam_comp)` (Pourcentage avec son intervalle de confiance à 95 %).
+Les demandes d'avis spécialisés représentent `r aftrans(tt$avis_specialise)` (Pourcentage avec son intervalle de confiance à 95 %).
 
 ## Objectif V
 *Recueillir les résultats des examens microbiologiques éventuellement demandés aux urgences et évaluer l’efficacité de la prise en charge thérapeutique proposé par l’urgentiste.*
@@ -458,7 +532,7 @@ Les demandes d'avis spécialisés représentent `r aftrans(tt$pertinence_exam_co
 
 ```{r}
 #| label: tbl-microb
-#| tbl-cap: Microbiologie
+#| tbl-cap: Résultat de l'ECBU
 
 
 tt |>
@@ -479,7 +553,7 @@ tt |>
 
 ```{r}
 #| label: fig-microb
-#| fig-cap: Germes retrouvés
+#| fig-cap: "Germes retrouvés (ECBU)"
 
 st <- paste0("Germes retrouvés aux urgences (N = ", length(na.omit(tt$germe)), ")")
 
@@ -576,7 +650,7 @@ On réalise une analyse en composante principale pour tenter de mieux décrire l
 #| label: mca-prepa
 
 zz <- tt |> 
-  dplyr::select(-c(id, fc, grossesse,traitement_propose,specialite,germe_identifie,microbio_dispo,exam_comp,germe,microbio_sortie)) |> 
+  dplyr::select(-c(id, fc, traitement_propose,specialite,germe_identifie,microbio_dispo,exam_comp,germe)) |> 
   dplyr::select(!starts_with("si_")) |> 
   remove_constant(na.rm = TRUE) |> 
   mutate(ta = cut(ta,
@@ -690,7 +764,7 @@ res <- hcut(zzc, k = 2, stand = TRUE)
 fviz_dend(res, rect = TRUE, cex = 0.5)
 ```
 
-Une classification non supervisée ne donne pas de résultat intéressant.
+La classification non supervisée ne donne pas de résultat intéressant.
 
 # Technique
 
